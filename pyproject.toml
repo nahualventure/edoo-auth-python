@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "edoo-auth"
+version = "0.1.0"
+description = "Edoo authentication library for Python/Django"
+requires-python = ">=3.10"
+dependencies = [
+    "PyJWT>=2.4.0",
+    "cryptography>=3.4.0",
+]
+
+[project.optional-dependencies]
+# JWKS validation + DRF auth classes only (Finance, Admissions)
+django = [
+    "Django>=3.2",
+    "djangorestframework>=3.12",
+]
+# Full OIDC flow — login, callback, session, refresh, logout (Edoo SIS)
+oidc = [
+    "authlib>=1.0.0",
+    "httpx>=0.23.0",
+]
+# OIDC + Django integration — the full stack for Edoo SIS
+django-oidc = [
+    "edoo-auth[django]",
+    "edoo-auth[oidc]",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "cryptography>=43.0.0",
+    "authlib>=1.0.0",
+    "httpx>=0.23.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["edoo_auth"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "edoo_auth_test_settings"
