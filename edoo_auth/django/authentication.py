@@ -7,6 +7,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
 from edoo_auth.core.jwks import verify_token
+from edoo_auth.core.oidc import decode_access_token
 from edoo_auth.core.types import TokenClaims
 
 
@@ -14,7 +15,7 @@ def _cfg() -> dict:
     cfg = getattr(settings, "EDOO_AUTH", None)
     if not cfg:
         raise RuntimeError("EDOO_AUTH is not configured in Django settings")
-    for key in ("FA_BASE_URL", "AUDIENCE", "RESOLVE_USER"):
+    for key in ("FA_BASE_URL", "RESOLVE_USER", "GET_AUDIENCE"):
         if key not in cfg:
             raise RuntimeError(f"EDOO_AUTH['{key}'] is required")
     return cfg
@@ -28,7 +29,7 @@ class FusionAuthJWTAuthentication(BaseAuthentication):
 
         EDOO_AUTH = {
             "FA_BASE_URL": "https://your-fa-instance.com",
-            "AUDIENCE":    "fa-client-id",
+            "GET_AUDIENCE": lambda tid: "fa-client-id",  # receives tid claim, returns expected client_id
             "RESOLVE_USER": lambda claims: User.objects.filter(fusionauth_user_id=claims.sub).first(),
         }
 
@@ -43,11 +44,15 @@ class FusionAuthJWTAuthentication(BaseAuthentication):
         cfg = _cfg()
         fa_base_url = cfg["FA_BASE_URL"]
 
+        # Decode tid unverified so we can resolve the audience before full verification
+        unverified = decode_access_token(token)
+        audience = cfg["GET_AUDIENCE"](unverified.get("tid", ""))
+
         try:
             payload = verify_token(
                 token,
                 jwks_uri=f"{fa_base_url}/.well-known/jwks.json",
-                audience=cfg["AUDIENCE"],
+                audience=audience,
                 issuer=cfg.get("ISSUER", fa_base_url),
                 algorithms=cfg.get("ALGORITHMS", ["RS256"]),
             )

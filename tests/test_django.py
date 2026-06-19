@@ -32,7 +32,7 @@ VALID_CLAIMS = TokenClaims(
 
 DJANGO_SETTINGS = {
     "FA_BASE_URL": "http://fusionauth:9011",
-    "AUDIENCE": AUDIENCE,
+    "GET_AUDIENCE": lambda tid: AUDIENCE,
     "RESOLVE_USER": lambda claims: claims,
 }
 
@@ -50,6 +50,7 @@ def _authenticate(token: str | None = "Bearer fake.jwt.token"):
 def _run_auth(request, verify_return=None, verify_raise=None):
     """Run FusionAuthJWTAuthentication against a request with mocked verify_token."""
     with patch("edoo_auth.django.authentication.verify_token") as mock_verify, \
+         patch("edoo_auth.django.authentication.decode_access_token", return_value={"tid": "tenant-uuid-1"}), \
          patch("edoo_auth.django.authentication._cfg", return_value=DJANGO_SETTINGS):
         if verify_raise:
             mock_verify.side_effect = verify_raise
@@ -113,6 +114,7 @@ class TestFusionAuthJWTAuthentication:
         request = _authenticate()
 
         with patch("edoo_auth.django.authentication.verify_token") as mock_verify, \
+             patch("edoo_auth.django.authentication.decode_access_token", return_value={"tid": "tenant-uuid-1"}), \
              patch("edoo_auth.django.authentication._cfg", return_value=settings_no_user):
             mock_verify.return_value = {
                 "sub": VALID_CLAIMS.sub, "email": VALID_CLAIMS.email,
@@ -240,10 +242,9 @@ class TestCfgValidation:
                 auth.authenticate(self._request())
 
     def test_missing_required_key_raises(self):
-        incomplete = {"FA_BASE_URL": "http://fa:9011", "RESOLVE_USER": lambda c: c}
-        with patch("edoo_auth.django.authentication._cfg", side_effect=RuntimeError("EDOO_AUTH['AUDIENCE'] is required")):
+        with patch("edoo_auth.django.authentication._cfg", side_effect=RuntimeError("EDOO_AUTH['GET_AUDIENCE'] is required")):
             auth = FusionAuthJWTAuthentication()
-            with pytest.raises(RuntimeError, match="AUDIENCE"):
+            with pytest.raises(RuntimeError, match="GET_AUDIENCE"):
                 auth.authenticate(self._request())
 
 
@@ -259,6 +260,7 @@ class TestMalformedTokenClaims:
         req = Request(raw)
 
         with patch("edoo_auth.django.authentication.verify_token", return_value=payload), \
+             patch("edoo_auth.django.authentication.decode_access_token", return_value={"tid": "t1"}), \
              patch("edoo_auth.django.authentication._cfg", return_value=DJANGO_SETTINGS):
             from rest_framework.exceptions import AuthenticationFailed
             with pytest.raises(AuthenticationFailed, match="missing required claim"):
@@ -296,6 +298,7 @@ def test_custom_issuer_and_algorithms_forwarded(mock_jwks, sign_token):
     req = Request(raw)
 
     with patch("edoo_auth.django.authentication.verify_token") as mock_verify, \
+         patch("edoo_auth.django.authentication.decode_access_token", return_value={"tid": "t1"}), \
          patch("edoo_auth.django.authentication._cfg", return_value=custom_settings):
         mock_verify.return_value = {
             "sub": "u1", "email": "a@b.com", "tid": "t1",

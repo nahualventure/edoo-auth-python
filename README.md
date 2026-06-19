@@ -29,7 +29,9 @@ Add to `settings.py`:
 ```python
 EDOO_AUTH = {
     "FA_BASE_URL": "https://your-fa-instance.com",
-    "AUDIENCE": "your-fa-client-id",
+    # Receives the tid claim from the token, returns the expected FA client_id for aud validation.
+    # Single-tenant: return the env var. Multi-tenant: look up client_id from DB by tenant_id.
+    "GET_AUDIENCE": lambda tid: os.getenv("FA_CLIENT_ID"),
     "RESOLVE_USER": lambda claims: claims,  # or look up a User from DB
 }
 
