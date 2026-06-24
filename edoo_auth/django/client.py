@@ -99,9 +99,6 @@ class EdooAuthClient:
 
     # ── Tenant resolution ─────────────────────────────────────────────────────
 
-    def resolve_tenants(self, email: str) -> list[dict]:
-        return self.config.on_resolve_tenants(email)
-
     # ── Login initiation ──────────────────────────────────────────────────────
 
     def initiate_login(self, tenant_id: str, *, tenant_name: str | None = None, email: str | None = None, school_id: str | None = None, prompt: str | None = None) -> HttpResponse:

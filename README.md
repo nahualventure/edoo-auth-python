@@ -97,9 +97,6 @@ EDOO_AUTH_OIDC = EdooAuthConfig(
         client_secret=os.getenv("FA_CLIENT_SECRET"),
     ),
 
-    # Returns a list of tenant dicts for a given email (for multi-tenant login pages)
-    on_resolve_tenants=lambda email: [],
-
     # Called after FA login — check whether the local account is active
     # Return {"status": "ok"} | {"status": "blocked"} | {"status": "not_found"}
     on_profile_check=lambda email, school_id: {"status": "ok"},
@@ -201,7 +198,7 @@ CSRF_COOKIE_SECURE = True
 
 Edoo runs one FA Tenant + one FA Application per product deployment (one school per Edoo SIS instance). `FA_TENANT_ID` and `FA_CLIENT_ID` are env vars — no runtime tenant disambiguation needed for single-tenant products.
 
-Multi-tenant products (Class, Finance, Admissions) share one FA deployment across multiple schools. Their `on_get_tenant_client` and `on_resolve_tenants` hooks handle tenant lookup dynamically.
+Multi-tenant products (Class, Finance, Admissions) share one FA deployment across multiple schools. Their `on_get_tenant_client` hook handles tenant lookup dynamically.
 
 ### What FusionAuth does and doesn't own
 

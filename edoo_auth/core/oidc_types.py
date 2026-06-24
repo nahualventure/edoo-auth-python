@@ -32,7 +32,6 @@ class EdooAuthConfig:
     fa_base_url: str
     redirect_uri: str
     on_get_tenant_client: Callable[[str], TenantClient]
-    on_resolve_tenants: Callable[[str], list[dict]]
     on_profile_check: Callable[[str, str], dict]    # email, school_id → {status}
     on_login_success: Callable | None = None        # (request, email) → None — called after successful OIDC callback
     on_session_resumed: Callable | None = None      # (request, email) → None — called each request when token slot is valid but Django session has no authenticated user
