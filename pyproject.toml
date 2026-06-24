@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "edoo-auth"
 version = "0.1.0"
 description = "Edoo authentication library for Python/Django"
-requires-python = ">=3.10"
+requires-python = ">=3.7"
 dependencies = [
     "PyJWT>=2.4.0",
     "cryptography>=3.4.0",
