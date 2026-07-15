@@ -2,25 +2,25 @@ from __future__ import annotations
 """
 Django view factory for receiving FusionAuth webhooks.
 
+Follows the ecosystem FRD pattern: ONE endpoint per action, each backed by
+its own FA webhook registration (e.g. `user.update` → `.../user-update`).
 Products own the event semantics; the library owns transport and security:
 signature verification (JWKS, no shared secrets), body parsing, and the
-response contract (200 handled/ignored, 401 bad signature, 400 malformed).
+response contract (200 handled/ignored, 403 bad signature, 400 malformed).
 
 Usage (product side):
 
     # urls.py
     from edoo_auth.django.webhooks import fa_webhook_view
-    from myapp.fa_events import on_fa_event
+    from myapp.fa_events import handle_user_update
 
     urlpatterns = [
-        path('fa/webhooks/', fa_webhook_view(on_fa_event)),
+        path('fa/webhooks/user-update', fa_webhook_view('user.update', handle_user_update)),
     ]
 
     # myapp/fa_events.py
-    def on_fa_event(event_type, event):     # event = FA's event object
-        if event_type == 'user.update':
-            ...
-        # unhandled event types are simply ignored
+    def handle_user_update(event):     # event = FA's event object
+        ...
 
 Requires EDOO_AUTH['FA_BASE_URL'] in Django settings (already present for
 products using FusionAuthJWTAuthentication).
@@ -39,11 +39,13 @@ from edoo_auth.core.webhooks import (
 )
 
 
-def fa_webhook_view(on_event):
+def fa_webhook_view(event_type, handler):
     """
-    Builds a webhook endpoint that verifies FA's signature and dispatches to
-    `on_event(event_type, event)`. The callable is invoked synchronously;
-    FA webhooks should be configured fire-and-forget (non-transactional).
+    Builds a webhook endpoint for a single FA event type. Verifies FA's
+    signature, then calls `handler(event)` when the event matches; any other
+    event type is acknowledged with 200 and ignored (the FA webhook for this
+    endpoint should only subscribe to `event_type` anyway). The handler runs
+    synchronously; configure the FA webhook fire-and-forget.
     """
 
     @csrf_exempt
@@ -58,15 +60,16 @@ def fa_webhook_view(on_event):
                 jwks_uri=jwks_uri,
             )
         except InvalidWebhookSignature:
-            return HttpResponse(status=401)
+            return HttpResponse(status=403)
 
         try:
             event = json.loads(request.body)["event"]
-            event_type = event["type"]
+            incoming_type = event["type"]
         except (ValueError, KeyError, TypeError):
             return HttpResponse(status=400)
 
-        on_event(event_type, event)
+        if incoming_type == event_type:
+            handler(event)
         return HttpResponse(status=200)
 
     return view
