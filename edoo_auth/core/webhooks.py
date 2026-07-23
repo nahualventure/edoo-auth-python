@@ -20,7 +20,6 @@ import hashlib
 import hmac
 
 import jwt
-from jwt import PyJWKClientError
 
 from edoo_auth.core.jwks import _get_jwks_client
 
@@ -47,7 +46,9 @@ def verify_webhook_signature(raw_body: bytes, signature_jwt: str | None, *, jwks
 
     try:
         signing_key = _get_jwks_client(jwks_uri).get_signing_key_from_jwt(signature_jwt)
-    except PyJWKClientError as e:
+    except jwt.PyJWTError as e:
+        # PyJWKClientError covers key lookup; a malformed header (e.g. "not-a-jwt")
+        # makes get_signing_key_from_jwt raise jwt.DecodeError, both are PyJWTError.
         raise InvalidWebhookSignature(f"JWKS key lookup failed: {e}") from e
 
     try:
