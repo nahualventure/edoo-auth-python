@@ -4,28 +4,14 @@ OIDC logic — authlib handles the protocol plumbing (PKCE, state, nonce,
 code exchange, ID token verification). We own everything above that:
 session slots, refresh deduplication, revocation.
 """
-import base64
-import json
 import time
 
 import httpx
 
 from edoo_auth.core.oidc_types import EdooAuthConfig, SessionSlot, TenantClient
-
-
-# ---------------------------------------------------------------------------
-# Access token — decode only (trusted via TLS from token exchange/refresh)
-# ---------------------------------------------------------------------------
-
-def decode_access_token(access_token: str) -> dict:
-    """
-    Decodes without verifying. Safe only when the token arrived directly
-    from FA over TLS in a token exchange or refresh response — never from
-    an untrusted source.
-    """
-    payload = access_token.split(".")[1]
-    padded = payload + "=" * (-len(payload) % 4)
-    return json.loads(base64.urlsafe_b64decode(padded))
+# Re-exported for existing callers; defined in core.tokens so [django] can reach
+# it without httpx/authlib.
+from edoo_auth.core.tokens import decode_access_token  # noqa: F401
 
 
 # ---------------------------------------------------------------------------

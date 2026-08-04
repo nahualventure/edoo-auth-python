@@ -7,7 +7,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
 from edoo_auth.core.jwks import verify_token
-from edoo_auth.core.oidc import decode_access_token
+from edoo_auth.core.tokens import decode_access_token
 from edoo_auth.core.types import TokenClaims
 
 
